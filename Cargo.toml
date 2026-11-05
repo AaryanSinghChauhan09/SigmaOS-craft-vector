@@ -1,0 +1,9 @@
+[package]
+name = "sigmaos_craft_vector"
+version = "0.1.0"
+edition = "2021"
+description = "Vector graphics integration for SigmaOS — SVG rendering, path boolean operations, and Inkscape/SVG compatibility"
+
+[lib]
+name = "sigmaos_craft_vector"
+path = "src/lib.rs"

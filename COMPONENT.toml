@@ -1,0 +1,16 @@
+[component]
+name = "SigmaOS-craft-vector"
+tier = 5
+stability = "scaffold"
+language = "rust"
+description = "Vector graphics integration for SigmaOS — SVG rendering, path boolean operations, and Inkscape/SVG compatibility"
+upstream = ["https://github.com/inkscape/inkscape"]
+
+[contract]
+provides = ["vector-paths", "boolean-operations"]
+depends_on = []
+
+[maturity]
+status = "Scaffold"
+test_evidence = "Compiles"
+next_milestone = "Verification test suite"
