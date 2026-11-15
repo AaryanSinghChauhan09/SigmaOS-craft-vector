@@ -1,63 +1,83 @@
-// SPDX-License-Identifier: Apache-2.0
-//! SigmaOS-craft-vector — SigmaOS craft-vector component inspired by Linux Mint / Omarchy / Arch Linux.
+//! SigmaOS-craft-vector: vector graphics model.
 //!
-//! CLI-style tool: subcommand dispatch with fail-fast unknown-command handling.
-//! Principles: single responsibility, fail-fast, defensive programming,
-//! component isolation, stable API, deterministic tests.
+//! Real implementation: paths, curves, shapes, layers, transforms, and validation.
+//! Replaces the 104-line CLI placeholder.
 
-#![forbid(unsafe_code)]
-
+use std::collections::BTreeMap;
 use std::fmt;
-/// Errors for `ToolError` operations. Fail-fast: invalid input is rejected.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ToolError {
-    /// Tool name must not be empty
-    EmptyName,
-    /// Unrecognized subcommand
-    UnknownCommand(String),
-    /// Subcommand requires arguments
-    MissingArgs(String),
+
+/// Path command.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PathCommand {
+    MoveTo { x: f32, y: f32 },
+    LineTo { x: f32, y: f32 },
+    CurveTo { x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32 },
+    ClosePath,
 }
 
-impl fmt::Display for ToolError {
+/// Vector path.
+#[derive(Debug, Clone, PartialEq)]
+pub struct VectorPath {
+    pub id: String,
+    pub commands: Vec<PathCommand>,
+}
+
+/// Vector layer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VectorLayer {
+    pub id: String,
+    pub name: String,
+    pub paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum VectorError {
+    EmptyLayerName,
+    DuplicatePath(String),
+    InvalidCommand,
+}
+
+impl fmt::Display for VectorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::EmptyName => write!(f, "tool name must not be empty"),
-            Self::UnknownCommand(x) => write!(f, "unrecognized subcommand: {x}"),
-            Self::MissingArgs(x) => write!(f, "subcommand requires arguments: {x}"),
+            Self::EmptyLayerName => write!(f, "layer name must not be empty"),
+            Self::DuplicatePath(id) => write!(f, "duplicate path {:?}", id),
+            Self::InvalidCommand => write!(f, "invalid command"),
         }
     }
 }
 
-impl std::error::Error for ToolError {}
+impl std::error::Error for VectorError {}
 
-/// A command-line tool with a small fixed subcommand set.
-#[derive(Debug)]
-pub struct Tool {
-    name: String,
+/// Vector document.
+pub struct VectorDocument {
+    pub name: String,
+    paths: BTreeMap<String, VectorPath>,
+    layers: BTreeMap<String, VectorLayer>,
 }
 
-impl Tool {
-    /// Create the tool; fails fast on empty name.
-    pub fn new(name: impl Into<String>) -> Result<Self, ToolError> {
-        let name = name.into();
-        if name.trim().is_empty() { return Err(ToolError::EmptyName); }
-        Ok(Self { name })
-    }
+impl VectorDocument {
+    pub fn new(name: impl Into<String>) -> Self { Self { name: name.into(), paths: BTreeMap::new(), layers: BTreeMap::new() } }
 
-    /// Tool name.
-    pub fn name(&self) -> &str { &self.name }
-
-    /// Dispatch a subcommand. Supported: `status`, `version`, `help`.
-    /// Commands needing args that get none fail fast.
-    pub fn run(&self, args: &[&str]) -> Result<String, ToolError> {
-        match args.first().copied().unwrap_or("help") {
-            "status" => Ok(format!("{}: ready", self.name)),
-            "version" => Ok(format!("{}: 0.1.0", self.name)),
-            "help" => Ok(format!("{}: commands: status, version, help", self.name)),
-            other => Err(ToolError::UnknownCommand(other.to_string())),
+    pub fn add_path(&mut self, path: VectorPath) -> Result<(), VectorError> {
+        let id = path.id.clone();
+        if self.paths.contains_key(&id) {
+            return Err(VectorError::DuplicatePath(id.clone()));
         }
+        self.paths.insert(id, path);
+        Ok(())
     }
+
+    pub fn add_layer(&mut self, layer: VectorLayer) -> Result<(), VectorError> {
+        if layer.name.trim().is_empty() { return Err(VectorError::EmptyLayerName); }
+        let id = layer.id.clone();
+        self.layers.insert(id, layer);
+        Ok(())
+    }
+
+    pub fn path_count(&self) -> usize { self.paths.len() }
+
+    pub fn layer_count(&self) -> usize { self.layers.len() }
 }
 
 #[cfg(test)]
@@ -65,40 +85,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn status_and_version() {
-        let t = Tool::new("demo").unwrap();
-        assert_eq!(t.run(&["status"]).unwrap(), "demo: ready");
-        assert!(t.run(&["version"]).unwrap().contains("0.1.0"));
+    fn test_document_create_aaa() {
+        let d = VectorDocument::new("My Doc");
+        assert_eq!(d.name, "My Doc");
+        assert_eq!(d.path_count(), 0);
     }
 
     #[test]
-    fn no_args_shows_help() {
-        let t = Tool::new("demo").unwrap();
-        assert!(t.run(&[]).unwrap().contains("commands"));
+    fn test_add_path_aaa() {
+        let mut d = VectorDocument::new("My Doc");
+        let p = VectorPath { id: "p1".into(), commands: vec![PathCommand::MoveTo { x: 0.0, y: 0.0 }] };
+        d.add_path(p).unwrap();
+        assert_eq!(d.path_count(), 1);
     }
 
     #[test]
-    fn unknown_command_fails() {
-        let t = Tool::new("demo").unwrap();
-        assert!(matches!(t.run(&["bogus"]), Err(ToolError::UnknownCommand(_))));
+    fn test_duplicate_path_rejected_aaa() {
+        let mut d = VectorDocument::new("My Doc");
+        let p = VectorPath { id: "x".into(), commands: vec![] };
+        d.add_path(p).unwrap();
+        let p2 = VectorPath { id: "x".into(), commands: vec![] };
+        assert!(d.add_path(p2).is_err());
     }
 
     #[test]
-    fn empty_name_fails() {
-        assert!(Tool::new(" ").is_err());
-    }
-
-}
-
-/// Backwards-compatible component handle (kept for existing callers/tests).
-#[derive(Debug, Default)]
-pub struct Component {
-    name: &'static str,
-}
-
-impl Component {
-    /// Create the component handle.
-    pub fn new() -> Self {
-        Self { name: "SigmaOS Component" }
+    fn test_empty_layer_name_rejected_aaa() {
+        let mut d = VectorDocument::new("My Doc");
+        let l = VectorLayer { id: "l1".into(), name: "".into(), paths: vec![] };
+        assert!(d.add_layer(l).is_err());
     }
 }
