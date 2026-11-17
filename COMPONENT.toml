@@ -3,7 +3,7 @@ name = "SigmaOS-craft-vector"
 tier = 5
 stability = "scaffold"
 language = "rust"
-description = "Vector graphics integration for SigmaOS — SVG rendering, path boolean operations, and Inkscape/SVG compatibility"
+description = "SigmaOS component SigmaOS-craft-vector"
 upstream = ["https://github.com/inkscape/inkscape"]
 
 [contract]
