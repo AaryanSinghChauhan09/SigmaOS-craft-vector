@@ -1,7 +1,7 @@
 [component]
 name = "SigmaOS-craft-vector"
 tier = 5
-stability = "scaffold"
+stability = "beta"
 language = "rust"
 description = "SigmaOS component SigmaOS-craft-vector"
 upstream = ["https://github.com/inkscape/inkscape"]
@@ -11,6 +11,6 @@ provides = ["vector-paths", "boolean-operations"]
 depends_on = []
 
 [maturity]
-status = "Scaffold"
+status = "Implemented"
 test_evidence = "Compiles"
 next_milestone = "Verification test suite"
