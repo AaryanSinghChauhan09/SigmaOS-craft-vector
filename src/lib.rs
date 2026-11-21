@@ -3,6 +3,9 @@
 //! Real implementation: paths, curves, shapes, layers, transforms, and validation.
 //! Replaces the 104-line CLI placeholder.
 
+/// Vector graphics management module.
+pub mod sigmavector;
+
 use std::collections::BTreeMap;
 use std::fmt;
 
